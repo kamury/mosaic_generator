@@ -8,7 +8,7 @@ at providers array:
 
 <code>
 'providers' => array(
-		'Mosaic\Generator\GeneratorServiceProvider',
+	...	'Mosaic\Generator\GeneratorServiceProvider'
 	),
 </code>
 
@@ -16,7 +16,7 @@ and aliases array:
 
 <code>
 	'aliases' => array(
-		'Mosaic' => 'Mosaic\Generator\GeneratorFacade',
+	...	'Mosaic' => 'Mosaic\Generator\GeneratorFacade'
 	),
 </code>
 
