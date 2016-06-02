@@ -258,7 +258,7 @@ class Generator {
     $target = Target::findOrFail($event_id);
     
     $mosaic = imagecreatefromjpeg($target->target_url);
-    $data = Thumbnails::orderBy('x', 'asc')->orderBy('y', 'asc')->get(); 
+    $data = Thumbnails::where('event_id', '=', $event_id)->orderBy('x', 'asc')->orderBy('y', 'asc')->get(); 
     
     $thumbs = array();
     foreach ($data as $row) {
