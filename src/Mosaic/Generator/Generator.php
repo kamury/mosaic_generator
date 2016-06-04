@@ -503,6 +503,10 @@ class Generator {
     
       if ($exif['Orientation'] == 8) {
         $img = imagerotate($img, 90, 0);
+      }
+      
+      if ($exif['Orientation'] == 3) {
+        $img = imagerotate($img, 180, 0);
       }   
     
       file_put_contents($this->tmpFolderBackgroundImages . '1.txt', $exif['Orientation']);
