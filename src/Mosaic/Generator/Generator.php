@@ -496,8 +496,16 @@ class Generator {
     }
     
     //rotate ios photo
-    if (isset($exif['Orientation']) && $exif['Orientation'] == 6) {
-      $img = imagerotate($img, 270, 0);   
+    if (isset($exif['Orientation'])) {
+      if ($exif['Orientation'] == 6) {
+        $img = imagerotate($img, 270, 0);
+      }
+    
+      if ($exif['Orientation'] == 8) {
+        $img = imagerotate($img, 90, 0);
+      }   
+    
+      file_put_contents($this->tmpFolderBackgroundImages . '1.txt', $exif['Orientation']);
     }
     
     if ($size > self::SIZE) {
