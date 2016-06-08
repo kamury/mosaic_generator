@@ -471,11 +471,15 @@ class Generator {
    
   public function resize($img_url, $save_path = '')
   {
-    $exif = @exif_read_data($img_url);
+    try {
+      $exif = @exif_read_data($img_url);
     
-    $img = imagecreatefromjpeg($img_url);
-    $width = imagesx($img); 
-    $height = imagesy($img);
+      $img = imagecreatefromjpeg($img_url);
+      $width = imagesx($img); 
+      $height = imagesy($img);  
+    } catch (Exception $e) {
+      return FALSE;
+    }
     
     if ($width != $height) {
       if ($width > $height) {
@@ -534,6 +538,7 @@ class Generator {
         unlink($img_url);
       }
       imagejpeg($img, $save_path, 95);
+      return TRUE;
     } else {
       return $img; 
     }
