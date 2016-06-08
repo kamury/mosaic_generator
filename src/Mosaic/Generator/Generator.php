@@ -59,8 +59,8 @@ class Generator {
     $img['height'] = imagesy($img['file']);
     
     // loops through every "cell" (rows/columns)
-    for($x = 15; $x < $target->rows; $x++) {
-      for($y= 14; $y < $target->columns; $y++) {
+    for($x = 0; $x < $target->rows; $x++) {
+      for($y = 0; $y < $target->columns; $y++) {
         $current_cell = $blank_cell;
         
         //avg image of each tile
