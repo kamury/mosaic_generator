@@ -16,7 +16,7 @@ class Generator {
   private $tmpFolderBackgroundImages = "/var/app/current/public/uploads/tmp/events_background_upload/";
   private $expired_interval = 16;
 
-  public function addTarget($event_id, $target_url, $rows, $columns) {
+  public function addTarget($event_id, $target_url, $rows, $columns, $print_width, $print_height) {
     //cleaning last target and parsed data
     Target::where('event_id', '=', $event_id)->delete();
     ParsedTarget::where('event_id', '=', $event_id)->delete();
@@ -25,7 +25,23 @@ class Generator {
     $data = $this->getSizes($target_url, $rows, $columns);
     $data['target_url'] = $target_url;
     $data['event_id'] = $event_id;
+    $data['print_width'] = $print_width;
+    $data['print_height'] = $print_height;
     Target::insert($data);
+  }
+  
+  public function setPrintSize($event_id, $print_width, $print_height)
+  {
+    //change if target exists
+    try {
+      $target = Target::findOrFail($event_id);
+      $target->print_width = $print_width;
+      $target->print_height = $print_height;
+      $target->save();
+      return TRUE;
+    } catch (Exception $e) {
+      return FALSE;
+    }
   }
   
   public function verifyTargetSize($img_url)
@@ -111,7 +127,7 @@ class Generator {
     $masked_image_url = $this->uploadFileOnAws($this->tmpFolderBackgroundImages . $filename, $filename, $event_id);
     unlink($this->tmpFolderBackgroundImages . $filename);
     
-    $processedImg = $this->processImage($img, $coordinates->x, $coordinates->y);
+    $processedImg = $this->processImage($img, $coordinates->x, $coordinates->y, $target->print_width, $target->print_height);
     $processed_filename = 'processed-' . $filename;
     imagejpeg($processedImg, $this->tmpFolderBackgroundImages . $processed_filename, 95);
     $processed_image_url = $this->uploadFileOnAws($this->tmpFolderBackgroundImages . $processed_filename, $processed_filename, $event_id);
@@ -226,14 +242,13 @@ class Generator {
     }
   }
 
-  private function processImage($img, $x, $y) {
+  private function processImage($img, $x, $y, $print_width, $print_height) {
     $width = imagesx($img); 
     $height = imagesy($img);
-    $new_width = 300;
-    $new_height = 450;
     
-    //$new_height = $height + 40;
-    //$new = imagecreatetruecolor($width, $new_height);
+    $new_width = $print_width;
+    $new_height = $print_height;
+    
     $new = imagecreatetruecolor($new_width, $new_height);
     $white = imagecolorallocate($new, 255, 255, 255);
     $black = imagecolorallocate($new, 0, 0, 0);
