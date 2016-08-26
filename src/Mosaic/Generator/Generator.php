@@ -102,7 +102,7 @@ class Generator {
     $target->save();
   }
 
-  public function addImgToMosaic($event_id, $image_url, $mediaId = null) {
+  public function addImgToMosaic($event_id, $image_url, $mediaId = null, $animate) {
     $img = imagecreatefromjpeg($image_url);
     $img_color = $this->getAvgColor($img);
     
@@ -182,9 +182,14 @@ class Generator {
     $current_mosaic_url = $this->uploadFileOnAws($this->tmpFolderBackgroundImages . $mosaic_filename, $mosaic_filename, $event_id, true);
     unlink($this->tmpFolderBackgroundImages . $mosaic_filename);
     
-    //mosaic has genered, image ready to be shown, set expired to show
-    $expired = $this->getExpired($event_id);
-    $thumb->expired_at = $expired;
+    if ($animate) {
+      //mosaic has genered, image ready to be shown, set expired to show
+      $thumb->expired_at = $this->getExpired($event_id);;
+    } else {
+      // FIXME [13.08.2016]: format should be in constant? or we should pass $animate to getExpired?
+      $thumb->expired_at = date('Y-m-d H:i:s', strtotime('-1 day'));
+    }
+    
     $thumb->current_mosaic_url = $current_mosaic_url;
     $thumb->update();
     
