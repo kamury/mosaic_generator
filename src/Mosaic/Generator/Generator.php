@@ -9,9 +9,8 @@ use Exception;
 class Generator {
 
   const SIZE = 1200;
-  
-  const TARGET_WIDTH = 1024;
-  const TARGET_HEIGHT = 768;
+  private $allowed_target_size = array('1024x768' => '64x48',
+                                       '1280x720' => '80x45');
   
   private $tmpFolderBackgroundImages = "/var/app/current/public/uploads/tmp/events_background_upload/";
   private $expired_interval = 16;
@@ -44,16 +43,17 @@ class Generator {
     }
   }
   
-  public function verifyTargetSize($img_url)
-  {
+  public function getGridSize($img_url)
+  { 
     $img = imagecreatefromjpeg($img_url);
     $width = imagesx($img); 
     $height = imagesy($img);
     
-    if ($width == self::TARGET_WIDTH && $height = self::TARGET_HEIGHT) {
-      return true;
+    if (isset($this->allowed_target_size["{$width}x{$height}"])) {
+      list($cols, $rows) = explode('x', $this->allowed_target_size["{$width}x{$height}"]);
+      return array('cols' => $cols, 'rows' => $rows);
     } else {
-      return false;
+      return FALSE;
     }
   }
 
@@ -531,9 +531,8 @@ class Generator {
       
       if ($exif['Orientation'] == 3) {
         $img = imagerotate($img, 180, 0);
-      }   
-    
-      file_put_contents($this->tmpFolderBackgroundImages . '1.txt', $exif['Orientation']);
+      }
+      
     }
     
     if ($size > self::SIZE) {
