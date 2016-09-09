@@ -12,7 +12,8 @@ class Generator {
   private $allowed_target_size = array('1024x768' => '64x48',
                                        '1280x720' => '80x45');
   
-  private $tmpFolderBackgroundImages = "/var/app/current/public/uploads/tmp/events_background_upload/";
+  private $tmpFolderBackgroundImages = "uploads/tmp/events_background_upload/";
+  private $fontsPath = "-/fonts/proxima.ttf";
   private $expired_interval = 16;
 
   public function addTarget($event_id, $target_url, $rows, $columns, $print_width, $print_height) {
@@ -123,15 +124,15 @@ class Generator {
     //put mask on the image
     $img = $this->setTransparentMask($img, $coordinates->red, $coordinates->green, $coordinates->blue);
     //save
-    imagejpeg($img, $this->tmpFolderBackgroundImages . $filename, 95);
-    $masked_image_url = $this->uploadFileOnAws($this->tmpFolderBackgroundImages . $filename, $filename, $event_id);
-    unlink($this->tmpFolderBackgroundImages . $filename);
+    imagejpeg($img, public_path($this->tmpFolderBackgroundImages . $filename), 95);
+    $masked_image_url = $this->uploadFileOnAws(public_path($this->tmpFolderBackgroundImages . $filename), $filename, $event_id);
+    unlink(public_path($this->tmpFolderBackgroundImages . $filename));
     
     $processedImg = $this->processImage($img, $coordinates->x, $coordinates->y, $target->print_width, $target->print_height);
     $processed_filename = 'processed-' . $filename;
-    imagejpeg($processedImg, $this->tmpFolderBackgroundImages . $processed_filename, 95);
-    $processed_image_url = $this->uploadFileOnAws($this->tmpFolderBackgroundImages . $processed_filename, $processed_filename, $event_id);
-    unlink($this->tmpFolderBackgroundImages . $processed_filename);
+    imagejpeg($processedImg, public_path($this->tmpFolderBackgroundImages . $processed_filename), 95);
+    $processed_image_url = $this->uploadFileOnAws(public_path($this->tmpFolderBackgroundImages . $processed_filename), $processed_filename, $event_id);
+    unlink(public_path($this->tmpFolderBackgroundImages . $processed_filename));
     
     //create thumb from img
     $thumb = imagecreatetruecolor($target->cell_width, $target->cell_height);
@@ -141,9 +142,9 @@ class Generator {
     //$thumb = setTransparentMask($img, $coordinates->red, $coordinates->green, $coordinates->blue);
     //save thumb
     $thumb_filename = 'thumb-' . $filename;
-    imagejpeg($thumb, $this->tmpFolderBackgroundImages . $thumb_filename, 95);
-    $thumb_url = $this->uploadFileOnAws($this->tmpFolderBackgroundImages . $thumb_filename, $thumb_filename, $event_id, true);
-    unlink($this->tmpFolderBackgroundImages . $thumb_filename);
+    imagejpeg($thumb, public_path($this->tmpFolderBackgroundImages . $thumb_filename), 95);
+    $thumb_url = $this->uploadFileOnAws(public_path($this->tmpFolderBackgroundImages . $thumb_filename), $thumb_filename, $event_id, true);
+    unlink(public_path($this->tmpFolderBackgroundImages . $thumb_filename));
     
     //save thumb in database
     /*$thumb = new Thumbnails();
@@ -178,9 +179,9 @@ class Generator {
     $mosaic = $this->generate($event_id);
     $mosaic_filename = 'mosaic-' . $filename;
     //save current mosaic
-    imagejpeg($mosaic, $this->tmpFolderBackgroundImages . $mosaic_filename, 95);
-    $current_mosaic_url = $this->uploadFileOnAws($this->tmpFolderBackgroundImages . $mosaic_filename, $mosaic_filename, $event_id, true);
-    unlink($this->tmpFolderBackgroundImages . $mosaic_filename);
+    imagejpeg($mosaic, public_path($this->tmpFolderBackgroundImages . $mosaic_filename), 95);
+    $current_mosaic_url = $this->uploadFileOnAws(public_path($this->tmpFolderBackgroundImages . $mosaic_filename), $mosaic_filename, $event_id, true);
+    unlink(public_path($this->tmpFolderBackgroundImages . $mosaic_filename));
     
     if ($animate) {
       //mosaic has genered, image ready to be shown, set expired to show
@@ -264,8 +265,7 @@ class Generator {
     
     imagecopyresized($new, $img, 0, 0, 0, 0, $new_width, $new_width, $width, $height);
     
-    //imagettftext($new, 14, 0, 10, $height+20, $black, '-/fonts/proxima.ttf', "{$x}, {$y}");
-    imagettftext($new, 14, 0, 10, 400, $black, '-/fonts/proxima.ttf', "{$x}, {$y}");
+    imagettftext($new, 14, 0, 10, 400, $black, public_path($this->fontsPath), "{$x}, {$y}");
     
     //rotate for printer
     $new = imagerotate($new, 180, $white);    
@@ -366,72 +366,6 @@ class Generator {
     
     return $multiple; 
   }
-  
-  public function avg($image_url)
-  {//var_dump(realpath('-/fonts/proxima.ttf'));exit;
-    $img = imagecreatefromjpeg($image_url);
-    $width = imagesx($img); 
-    $height = imagesy($img);
-    
-    $new = imagecreatetruecolor($width, $height);
-    
-    $cell = imagecreatefromjpeg('/var/app/current/public/uploads/tmp/events_background_upload/cell_1459924009.jpg');
-    $cell_width = imagesx($cell); 
-    $cell_height = imagesy($cell);
-    
-    
-    
-    imagecopyresized($new, $cell, 0, 0, 0, 0, $width, $height, $cell_width, $cell_height);
-    //imagecopyresampled($new, $cell, 0, 0, 0, 0, $width, $height, $cell_width, $cell_height);
-    imagejpeg($new, $this->tmpFolderBackgroundImages . '16.jpg', 95);
-    
-    var_dump($cell_width, $cell_height, $width, $height);
-    
-    imagecopymerge($img, $new, 0, 0, 0, 0, $width, $height, 50);
-    imagejpeg($img, $this->tmpFolderBackgroundImages . '26.jpg', 95);exit;
-    
-    
-    $new_height = $height + 40;
-    $new = imagecreatetruecolor($width, $new_height);
-    $white = imagecolorallocate($new, 255, 255, 255);
-    imagefill($new, 0, 0, $white);
-    
-    imagecopy($new, $img, 0, 0, 0, 0, $width, $height);
-    
-    $black = imagecolorallocate($new, 0, 0, 0);
-    
-    imagettftext($new, 14, 0, 10, $height+20, $black, '-/fonts/proxima.ttf', 'some text here');    
-    
-    imagejpeg($new, $this->tmpFolderBackgroundImages . 'text.jpg', 95);exit;
-    
-    $img_origin = $img;
-    $img_color = $this->getAvgColor($img);
-    
-    $target = imagecreatefromjpeg($target_url);
-    $target_color = $this->getAvgColor($target);
-    
-    imagejpeg($target, $this->tmpFolderBackgroundImages . '1.jpg', 95);
-    imagejpeg($img, $this->tmpFolderBackgroundImages . '2.jpg', 95);
-    
-    
-    $tweak = imagecreatetruecolor(imagesx($img), imagesy($img));
-    $color_resource = imagecolorallocate($tweak, $target_color['red'], $target_color['green'], $target_color['blue']);
-    imagefill($tweak, 0, 0, $color_resource);
-    imagecopymerge($tweak, $img, 0, 0, 0, 0, imagesx($img), imagesy($img), 80);
-    $img = $tweak;
-     
-    imagejpeg($img, $this->tmpFolderBackgroundImages . '3.jpg', 95);
-    
-    $target_hex = '#' . dechex($target_color['red']) . dechex($target_color['green']) . dechex($target_color['blue']);  
-    
-    $imagick = new Imagick($image_url);
-    $imagick->colorizeImage($target_hex, 0.2);
-    $imagick->writeImage($this->tmpFolderBackgroundImages . '4.jpg');
-    
-    var_dump($img_color, $target_color, $target_hex);
-    
-    //$this->addImgToMosaic(1, $image_url);
-  }
     
   // determines average color of an image
   private function getAvgColor($img) {
@@ -531,7 +465,8 @@ class Generator {
       
       if ($exif['Orientation'] == 3) {
         $img = imagerotate($img, 180, 0);
-      }
+      }   
+    
       
     }
     
