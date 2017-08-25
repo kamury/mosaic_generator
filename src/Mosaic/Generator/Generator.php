@@ -9,6 +9,7 @@ use Exception;
 class Generator {
 
   const SIZE = 1200;
+  const COORDINATE_OFFSET = 50;
   private $allowed_target_size = array('1024x768' => '64x48',
                                        '1280x720' => '80x45');
   
@@ -103,18 +104,43 @@ class Generator {
     $target->save();
   }
 
-  public function addImgToMosaic($event_id, $image_url, $mediaId = null, $animate) {
+  public function addImgToMosaic($event_id, $image_url, $mediaId = null, $animate, $watermark_depth) {
     $img = imagecreatefromjpeg($image_url);
     $img_color = $this->getAvgColor($img);
     
-    $coordinates = ParsedTarget::select('*', DB::raw("abs(red - {$img_color['red']}) + abs(green - {$img_color['green']}) + abs(blue - {$img_color['blue']}) as diff"))->
-    where('is_filled', '=', 0)->where('event_id', '=', $event_id)->orderBy('diff', 'asc')->first();
+    //x+-100, y+-100
+    //но важно добить последние
     
-    //FIXME make finish (all is_filled=1)  
+    //get last coordinates
+    $last_thumb = Thumbnails::select()->where('event_id', '=', $event_id)->orderBy('created_at', 'desc')->first();
+    
+    //чтобы координваты были не рядом
+    $coordinates = ParsedTarget::select('*', DB::raw("abs(red - {$img_color['red']}) + abs(green - {$img_color['green']}) + abs(blue - {$img_color['blue']}) as diff"))->
+    where('is_filled', '=', 0)->where('event_id', '=', $event_id)->
+    whereNotBetween('x', array($last_thumb->x-self::COORDINATE_OFFSET, $last_thumb->x+self::COORDINATE_OFFSET))->
+    whereNotBetween('y', array($last_thumb->y-self::COORDINATE_OFFSET, $last_thumb->y+self::COORDINATE_OFFSET))->orderBy('diff', 'asc')->first();
+    
+      
     if (!$coordinates) {
-      //FIXME ecxeption not found
-      throw new Exception('No target data in db. Please (re)parse target.'); 
+      $coordinates = ParsedTarget::select('*', DB::raw("abs(red - {$img_color['red']}) + abs(green - {$img_color['green']}) + abs(blue - {$img_color['blue']}) as diff"))->
+      where('is_filled', '=', 0)->where('event_id', '=', $event_id)->orderBy('diff', 'asc')->first();
+      
+      //FIXME make finish (all is_filled=1)
+      if (!$coordinates) {
+        //FIXME ecxeption not found
+        throw new Exception('No target data in db. Please (re)parse target.');
+      } 
     }
+    
+    /*$coordinates = ParsedTarget::select('*', DB::raw("abs(red - {$img_color['red']}) + abs(green - {$img_color['green']}) + abs(blue - {$img_color['blue']}) as diff"))->
+    where('is_filled', '=', 0)->where('event_id', '=', $event_id)->orderBy('diff', 'asc')->first();
+      
+    if (!$coordinates) {
+      
+        //FIXME ecxeption not found
+        throw new Exception('No target data in db. Please (re)parse target.');
+       
+    }*/
     
     $this->setFiled($coordinates->id);                  
     $target = Target::findOrFail($event_id);
@@ -122,7 +148,7 @@ class Generator {
     $filename = md5($image_url.$now).'.jpg';
     
     //put mask on the image
-    $img = $this->setTransparentMask($img, $coordinates->red, $coordinates->green, $coordinates->blue);
+    $img = $this->setTransparentMask($img, $coordinates->red, $coordinates->green, $coordinates->blue, $watermark_depth);
     //save
     imagejpeg($img, public_path($this->tmpFolderBackgroundImages . $filename), 95);
     $masked_image_url = $this->uploadFileOnAws(public_path($this->tmpFolderBackgroundImages . $filename), $filename, $event_id);
@@ -197,14 +223,14 @@ class Generator {
     return $thumb->id;
   }
 
-  private function setTransparentMask($img, $red, $green, $blue) {
+  private function setTransparentMask($img, $red, $green, $blue, $watermark_depth) {
     $width = imagesx($img); 
     $height = imagesy($img);
     
     $tweak = imagecreatetruecolor($width, $height);
     $color_resource = imagecolorallocate($tweak, $red, $green, $blue);
     imagefill($tweak, 0, 0, $color_resource);
-    imagecopymerge($tweak, $img, 0, 0, 0, 0, $width, $height, 65);
+    imagecopymerge($tweak, $img, 0, 0, 0, 0, $width, $height, $watermark_depth);
     return $tweak;
   }
 
@@ -427,7 +453,6 @@ class Generator {
   {
     try {
       $exif = @exif_read_data($img_url);
-    
       $img = imagecreatefromjpeg($img_url);
       $width = imagesx($img); 
       $height = imagesy($img);  
