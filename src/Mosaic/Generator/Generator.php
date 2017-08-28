@@ -114,11 +114,13 @@ class Generator {
     //get last coordinates
     $last_thumb = Thumbnails::select()->where('event_id', '=', $event_id)->orderBy('created_at', 'desc')->first();
     
-    //чтобы координваты были не рядом
-    $coordinates = ParsedTarget::select('*', DB::raw("abs(red - {$img_color['red']}) + abs(green - {$img_color['green']}) + abs(blue - {$img_color['blue']}) as diff"))->
-    where('is_filled', '=', 0)->where('event_id', '=', $event_id)->
-    whereNotBetween('x', array($last_thumb->x-self::COORDINATE_OFFSET, $last_thumb->x+self::COORDINATE_OFFSET))->
-    whereNotBetween('y', array($last_thumb->y-self::COORDINATE_OFFSET, $last_thumb->y+self::COORDINATE_OFFSET))->orderBy('diff', 'asc')->first();
+    if ($last_thumb) {
+      //чтобы координваты были не рядом
+      $coordinates = ParsedTarget::select('*', DB::raw("abs(red - {$img_color['red']}) + abs(green - {$img_color['green']}) + abs(blue - {$img_color['blue']}) as diff"))->
+      where('is_filled', '=', 0)->where('event_id', '=', $event_id)->
+      whereNotBetween('x', array($last_thumb->x-self::COORDINATE_OFFSET, $last_thumb->x+self::COORDINATE_OFFSET))->
+      whereNotBetween('y', array($last_thumb->y-self::COORDINATE_OFFSET, $last_thumb->y+self::COORDINATE_OFFSET))->orderBy('diff', 'asc')->first(); 
+    }
     
       
     if (!$coordinates) {
