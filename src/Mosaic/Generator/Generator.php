@@ -113,6 +113,7 @@ class Generator {
     
     //get last coordinates
     $last_thumb = Thumbnails::select()->where('event_id', '=', $event_id)->orderBy('created_at', 'desc')->first();
+    $coordinates = null;
     
     if ($last_thumb) {
       //чтобы координваты были не рядом
