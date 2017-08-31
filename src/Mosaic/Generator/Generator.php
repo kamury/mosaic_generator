@@ -104,7 +104,7 @@ class Generator {
     $target->save();
   }
 
-  public function addImgToMosaic($event_id, $image_url, $mediaId = null, $animate, $watermark_depth) {
+  public function addImgToMosaic($event_id, $image_url, $mediaId = null, $animate, $watermark_depth = 65) {
     $img = imagecreatefromjpeg($image_url);
     $img_color = $this->getAvgColor($img);
     
