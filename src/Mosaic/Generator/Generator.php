@@ -10,7 +10,6 @@ use Log;
 class Generator {
 
   const SIZE = 1200;
-  const COORDINATE_OFFSET = 15;
   private $allowed_target_size = array('1024x768' => '64x48',
                                        '1280x720' => '80x45');
   
