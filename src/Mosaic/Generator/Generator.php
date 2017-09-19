@@ -5,11 +5,12 @@ use DB, Config, AWS;
 use DateTime, DateTimeZone;
 use Imagick;
 use Exception;
+use Log;
 
 class Generator {
 
   const SIZE = 1200;
-  const COORDINATE_OFFSET = 50;
+  const COORDINATE_OFFSET = 15;
   private $allowed_target_size = array('1024x768' => '64x48',
                                        '1280x720' => '80x45');
   
@@ -45,18 +46,17 @@ class Generator {
     }
   }
   
-  public function getGridSize($img_url)
+  public function setMosaicSize($event_id, $mosaic_size)
+  {
+    $target = Target::findOrFail($event_id);
+    $grid_size = self::getGridSize($mosaic_size);
+    self::addTarget($event_id, $target->target_url, $grid_size['rows'], $grid_size['cols'], $target->print_width, $target->print_height);
+  }
+  
+  public function getGridSize($mosaic_size)
   { 
-    $img = imagecreatefromjpeg($img_url);
-    $width = imagesx($img); 
-    $height = imagesy($img);
-    
-    if (isset($this->allowed_target_size["{$width}x{$height}"])) {
-      list($cols, $rows) = explode('x', $this->allowed_target_size["{$width}x{$height}"]);
-      return array('cols' => $cols, 'rows' => $rows);
-    } else {
-      return FALSE;
-    }
+    list($cols, $rows) = explode('x', $mosaic_size);
+    return array('cols' => $cols, 'rows' => $rows);
   }
 
   public function isParsed($event_id) {
@@ -83,18 +83,17 @@ class Generator {
         
         //avg image of each tile
         imagecopy($current_cell, $img['file'], 0, 0, $y * $target->cell_width, $x * $target->cell_height, $img['width'], $img['height']);
-        /*$current_cell_filename = 'cell_' . time() . '.jpg';
+        $current_cell_filename = 'cell_' . time() . '.jpg';
         //save for watermark
         imagejpeg($current_cell, $this->tmpFolderBackgroundImages . $current_cell_filename, 95);
-        var_dump($this->tmpFolderBackgroundImages . $current_cell_filename); exit;
-        $current_cell_url = $this->uploadFileOnAws($this->tmpFolderBackgroundImages . $current_cell_filename, $current_cell_filename, $event_id);
+        $source_cell_url = $this->uploadFileOnAws($this->tmpFolderBackgroundImages . $current_cell_filename, $current_cell_filename, $event_id);
         unlink($this->tmpFolderBackgroundImages . $current_cell_filename);
-        */
+        
         $data = $this->getAvgColor($current_cell);
         $data['event_id'] = $event_id;
         $data['x'] = $x;
         $data['y'] = $y;
-        //$data['cell_url'] = $current_cell_url;
+        $data['source_cell'] = $source_cell_url;
         
         ParsedTarget::insert($data);                        
       }
@@ -105,25 +104,32 @@ class Generator {
   }
 
   public function addImgToMosaic($event_id, $image_url, $mediaId = null, $animate, $watermark_depth = 65) {
+    $target = Target::findOrFail($event_id);
     $img = imagecreatefromjpeg($image_url);
     $img_color = $this->getAvgColor($img);
-    
-    //x+-100, y+-100
-    //но важно добить последние
     
     //get last coordinates
     $last_thumb = Thumbnails::select()->where('event_id', '=', $event_id)->orderBy('created_at', 'desc')->first();
     $coordinates = null;
     
+    DB::enableQueryLog();
+    
     if ($last_thumb) {
+      $x_offset = floor($target->columns / 8);
+      $y_offset = floor($target->rows / 8);
       //чтобы координваты были не рядом
+      $x_inf = ($last_thumb->x-$x_offset > 0) ? $last_thumb->x-$x_offset : 0;
+      $y_inf = ($last_thumb->y-$y_offset > 0) ? $last_thumb->y-$y_offset : 0;
+      
       $coordinates = ParsedTarget::select('*', DB::raw("abs(red - {$img_color['red']}) + abs(green - {$img_color['green']}) + abs(blue - {$img_color['blue']}) as diff"))->
       where('is_filled', '=', 0)->where('event_id', '=', $event_id)->
-      whereNotBetween('x', array($last_thumb->x-self::COORDINATE_OFFSET, $last_thumb->x+self::COORDINATE_OFFSET))->
-      whereNotBetween('y', array($last_thumb->y-self::COORDINATE_OFFSET, $last_thumb->y+self::COORDINATE_OFFSET))->orderBy('diff', 'asc')->first(); 
+      whereNotBetween('x', array($x_inf, $last_thumb->x+$x_offset))->
+      whereNotBetween('y', array($y_inf, $last_thumb->y+$y_offset))->orderBy('diff', 'asc')->first(); 
+          
+      Log::info('coord 11 ' . $coordinates['x'] . $coordinates['y']); 
     }
     
-      
+    //но важно добить последние, если выбрать координаты не рядом уже не получается
     if (!$coordinates) {
       $coordinates = ParsedTarget::select('*', DB::raw("abs(red - {$img_color['red']}) + abs(green - {$img_color['green']}) + abs(blue - {$img_color['blue']}) as diff"))->
       where('is_filled', '=', 0)->where('event_id', '=', $event_id)->orderBy('diff', 'asc')->first();
@@ -134,24 +140,14 @@ class Generator {
         throw new Exception('No target data in db. Please (re)parse target.');
       } 
     }
-    
-    /*$coordinates = ParsedTarget::select('*', DB::raw("abs(red - {$img_color['red']}) + abs(green - {$img_color['green']}) + abs(blue - {$img_color['blue']}) as diff"))->
-    where('is_filled', '=', 0)->where('event_id', '=', $event_id)->orderBy('diff', 'asc')->first();
-      
-    if (!$coordinates) {
-      
-        //FIXME ecxeption not found
-        throw new Exception('No target data in db. Please (re)parse target.');
-       
-    }*/
-    
+    Log::info('coord 22 ' . $coordinates['x'] . $coordinates['y']);
     $this->setFiled($coordinates->id);                  
-    $target = Target::findOrFail($event_id);
+    
     $now = time();
     $filename = md5($image_url.$now).'.jpg';
     
     //put mask on the image
-    $img = $this->setTransparentMask($img, $coordinates->red, $coordinates->green, $coordinates->blue, $watermark_depth);
+    $img = $this->setTransparentMask($img, $coordinates->source_cell, $target->cell_width, $target->cell_height, 100 - $watermark_depth);
     //save
     imagejpeg($img, public_path($this->tmpFolderBackgroundImages . $filename), 95);
     $masked_image_url = $this->uploadFileOnAws(public_path($this->tmpFolderBackgroundImages . $filename), $filename, $event_id);
@@ -226,15 +222,14 @@ class Generator {
     return $thumb->id;
   }
 
-  private function setTransparentMask($img, $red, $green, $blue, $watermark_depth) {
-    $width = imagesx($img); 
-    $height = imagesy($img);
+  private function setTransparentMask($img, $source_cell, $cell_width, $cell_height, $watermark_depth) {
+    $thumb = imagecreatetruecolor($cell_width, $cell_height);
+    imagecopyresampled($thumb, $img, 0, 0, 0, 0, $cell_width, $cell_height, imagesx($img), imagesy($img));
     
-    $tweak = imagecreatetruecolor($width, $height);
-    $color_resource = imagecolorallocate($tweak, $red, $green, $blue);
-    imagefill($tweak, 0, 0, $color_resource);
-    imagecopymerge($tweak, $img, 0, 0, 0, 0, $width, $height, $watermark_depth);
-    return $tweak;
+    $src = imagecreatefromjpeg('http:' . $source_cell);
+    
+    imagecopymerge($src, $thumb, 0, 0, 0, 0, $cell_width, $cell_height, $watermark_depth);
+    return $src;
   }
 
   public function getCurrentImage($event_id, $showed_ts) {
@@ -355,6 +350,7 @@ class Generator {
   }
 
   private function getSizes($url, $rows, $columns) {
+    echo 111 . $url;
     $img['file']    = imagecreatefromjpeg($url);
     $img['width']  = imagesx($img['file']);
     $img['height'] = imagesy($img['file']);
