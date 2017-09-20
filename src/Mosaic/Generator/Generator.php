@@ -82,7 +82,7 @@ class Generator {
         
         //avg image of each tile
         imagecopy($current_cell, $img['file'], 0, 0, $y * $target->cell_width, $x * $target->cell_height, $img['width'], $img['height']);
-        $current_cell_filename = 'cell_' . $y . time() . '.jpg';
+        $current_cell_filename = 'cell_' . $x . $y . time() . '.jpg';
         //save for watermark
         imagejpeg($current_cell, $this->tmpFolderBackgroundImages . $current_cell_filename, 95);
         $source_cell_url = $this->uploadFileOnAws($this->tmpFolderBackgroundImages . $current_cell_filename, $current_cell_filename, $event_id);
