@@ -222,13 +222,16 @@ class Generator {
   }
 
   private function setTransparentMask($img, $source_cell, $cell_width, $cell_height, $watermark_depth) {
-    $thumb = imagecreatetruecolor($cell_width, $cell_height);
-    imagecopyresampled($thumb, $img, 0, 0, 0, 0, $cell_width, $cell_height, imagesx($img), imagesy($img));
+    $width = imagesx($img);
+    $height = imagesy($img);
     
     $src = imagecreatefromjpeg('http:' . $source_cell);
+      
+    $big_src = imagecreatetruecolor($width, $height);
+    imagecopyresampled($big_src, $src, 0, 0, 0, 0, $width, $height, imagesx($src), imagesy($src));
     
-    imagecopymerge($src, $thumb, 0, 0, 0, 0, $cell_width, $cell_height, $watermark_depth);
-    return $src;
+    imagecopymerge($big_src, $img, 0, 0, 0, 0, $width, $height, $watermark_depth);
+    return $big_src;
   }
 
   public function getCurrentImage($event_id, $showed_ts) {
@@ -349,7 +352,6 @@ class Generator {
   }
 
   private function getSizes($url, $rows, $columns) {
-    echo 111 . $url;
     $img['file']    = imagecreatefromjpeg($url);
     $img['width']  = imagesx($img['file']);
     $img['height'] = imagesy($img['file']);
