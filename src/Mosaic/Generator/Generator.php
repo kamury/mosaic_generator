@@ -225,12 +225,22 @@ class Generator {
     $width = imagesx($img);
     $height = imagesy($img);
     
-    $src = imagecreatefromjpeg('http:' . $source_cell);
-      
+    /*$src = imagecreatefromjpeg('http:' . $source_cell);
+    
+    //resample cell  
     $big_src = imagecreatetruecolor($width, $height);
-    imagecopyresampled($big_src, $src, 0, 0, 0, 0, $width, $height, imagesx($src), imagesy($src));
+    imagecopyresampled($big_src, $src, 0, 0, 0, 0, $width, $height, imagesx($src), imagesy($src));*/
+    
+    $imagick = new Imagick('http:' . $source_cell);
+    $imagick->resampleImage($width, $height, \Imagick::FILTER_LANCZOS, 1);
+    $filename = time() . round(100) . '.jpg';
+    $imagick->writeImage(public_path($this->tmpFolderBackgroundImages . $filename));
+    
+    $big_src = imagecreatefromjpeg(public_path($this->tmpFolderBackgroundImages . $filename));
     
     imagecopymerge($big_src, $img, 0, 0, 0, 0, $width, $height, $watermark_depth);
+    unlink(public_path($this->tmpFolderBackgroundImages . $filename));
+    
     return $big_src;
   }
 
