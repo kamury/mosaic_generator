@@ -237,7 +237,7 @@ class Generator {
     $filename = time() . round(100) . '.jpg';
     $imagick->writeImage(public_path($this->tmpFolderBackgroundImages . $filename));*/
     
-    $big_src = imagecreatefromjpeg(public_path($this->tmpFolderBackgroundImages . $filename));
+    //$big_src = imagecreatefromjpeg(public_path($this->tmpFolderBackgroundImages . $filename));
     
     imagecopymerge($big_src, $img, 0, 0, 0, 0, $width, $height, $watermark_depth);
     //unlink(public_path($this->tmpFolderBackgroundImages . $filename));
