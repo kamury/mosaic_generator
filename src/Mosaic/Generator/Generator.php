@@ -222,6 +222,7 @@ class Generator {
   }
 
   private function setTransparentMask($img, $source_cell, $cell_width, $cell_height, $watermark_depth) {
+    Log::info('start mask');
     $width = imagesx($img);
     $height = imagesy($img);
     
@@ -240,7 +241,7 @@ class Generator {
     
     imagecopymerge($big_src, $img, 0, 0, 0, 0, $width, $height, $watermark_depth);
     //unlink(public_path($this->tmpFolderBackgroundImages . $filename));
-    
+    Log::info('finish mask');
     return $big_src;
   }
 
