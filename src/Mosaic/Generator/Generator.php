@@ -296,7 +296,7 @@ class Generator {
     $last_thumb = Thumbnails::where('event_id', '=', $event_id)->
       orderBy('expired_at', 'desc')->first();
     
-    $random_number = rand(0, $count);
+    $random_number = rand(0, $count-1);
     
     $random_thumb = Thumbnails::where('event_id', '=', $event_id)->
       orderBy('expired_at', 'asc')->offset($random_number)->first();
