@@ -273,6 +273,7 @@ class Generator {
       $data['ts'] = $last_ts;
       return $data; 
     } else {
+      //get last mosaic
       $last_thumb = Thumbnails::where('event_id', '=', $event_id)->
       orderBy('expired_at', 'desc')->first();
       
@@ -282,6 +283,42 @@ class Generator {
       } else {
         return array();
       }
+    }
+  }
+
+  public function getRandomImage($event_id, $showed_ts) {
+    $count = Thumbnails::where('event_id', '=', $event_id)->count();
+    if ($count == 0) {
+      return array();
+    }
+    
+    //get last mosaic
+    $last_thumb = Thumbnails::where('event_id', '=', $event_id)->
+      orderBy('expired_at', 'desc')->first();
+    
+    $random_number = rand(0, $count);
+    
+    $random_thumb = Thumbnails::where('event_id', '=', $event_id)->
+      orderBy('expired_at', 'asc')->offset($random_number)->first();
+      
+    $target = Target::findOrFail($event_id);
+    $data['height'] = $target->cell_height;
+    $data['width'] = $target->cell_width;
+    $data['rows'] = $target->rows;
+    $data['columns'] = $target->columns;
+
+    if ($random_thumb) {
+      //return the same showed_ts
+      $last_ts = $showed_ts;
+      
+      $data['x'] = $random_thumb->y;
+      $data['y'] = $random_thumb->x;
+      $data['url'] = $random_thumb->original_image_url;
+      $data['mosaic_url'] = $last_thumb->current_mosaic_url;
+      $data['ts'] = $last_ts;
+      return $data; 
+    } else {
+      return array();
     }
   }
 
