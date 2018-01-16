@@ -102,7 +102,7 @@ class Generator {
     $target->save();
   }
 
-  public function addImgToMosaic($event_id, $image_url, $mediaId = null, $animate, $watermark_depth = 65) {
+  public function addImgToMosaic($event_id, $image_url, $mediaId = null, $animate, $watermark_depth = 65, $source_type = 'instagram') {
     $target = Target::findOrFail($event_id);
     $img = imagecreatefromjpeg($image_url);
     $img_color = $this->getAvgColor($img);
@@ -187,6 +187,7 @@ class Generator {
     $thumb_data = array(
       'instagram_image_id' => $mediaId,
       'event_id' => $event_id,
+      'source_type' => $source_type,
       'thumb_url' => $thumb_url,
       'processed_image_url' => $processed_image_url,
       'masked_image_url' =>$masked_image_url,
@@ -286,8 +287,10 @@ class Generator {
     }
   }
 
-  public function getRandomImage($event_id, $showed_ts) {
-    $count = Thumbnails::where('event_id', '=', $event_id)->count();
+  public function getRandomImage($event_id, $showed_ts, $exclude_source_types) {
+    
+    
+    $count = Thumbnails::where('event_id', '=', $event_id)->whereNotIn('source_type', $exclude_source_types)->count();
     if ($count == 0) {
       return array();
     }
@@ -298,7 +301,7 @@ class Generator {
     
     $random_number = rand(0, $count-1);
     
-    $random_thumb = Thumbnails::where('event_id', '=', $event_id)->
+    $random_thumb = Thumbnails::where('event_id', '=', $event_id)->whereNotIn('source_type', $exclude_source_types)->
       orderBy('expired_at', 'asc')->offset($random_number)->first();
       
     $target = Target::findOrFail($event_id);
