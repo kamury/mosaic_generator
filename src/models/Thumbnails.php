@@ -13,7 +13,7 @@ class Thumbnails extends Model {
   protected $table = 'mosaic_generator_thumbnails';
   //protected $primaryKey = 'thumb_url';
   protected $guarded = array('id');
-  protected $fillable = array('event_id', 'thumb_url', 'processed_image_url', 'masked_image_url', 'original_image_url', 'red', 'green', 'blue','x','y');
+  protected $fillable = array('event_id', 'source_type', 'thumb_url', 'processed_image_url', 'masked_image_url', 'original_image_url', 'red', 'green', 'blue','x','y');
   
 }
 
