@@ -146,7 +146,7 @@ class Generator {
       whereNotBetween('x', array($x_inf, $last_thumb->x+$x_offset))->
       whereNotBetween('y', array($y_inf, $last_thumb->y+$y_offset))->orderBy('diff', 'asc')->first(); 
           
-      Log::info('coord 11 ' . $coordinates->x . $coordinates->y); 
+      Log::info('coord 11 ' . $coordinates->x . '-' . $coordinates->y); 
     }
     
     //но важно добить последние, если выбрать координаты не рядом уже не получается
@@ -162,7 +162,7 @@ class Generator {
         exit();
       } 
     }
-    Log::info('coord 22 ' . $coordinates->x . $coordinates->y);
+    Log::info('coord 22 ' . $coordinates->x . '-' . $coordinates->y);
     $this->setFiled($coordinates->id);                  
     
     $now = time();
@@ -509,6 +509,7 @@ class Generator {
     $parsed = ParsedTarget::findOrFail($id);
     $parsed->is_filled = 1;
     $parsed->save();
+    Log::info('filled ' . $id);
   }
 
   //get closest multiple
