@@ -16,6 +16,27 @@ class Generator {
   private $tmpFolderBackgroundImages = "uploads/tmp/events_background_upload/";
   private $fontsPath = "-/fonts/proxima.ttf";
   private $expired_interval = 16;
+  
+  public function getHighres($event_id, $mosaic_size)
+  {
+    
+    //regenerate mosaic
+    $mosaic = $this->generateHighres($event_id);
+    $mosaic_filename = 'highresmosaic.jpg';
+    //save current mosaic
+    imagejpeg($mosaic, public_path($this->tmpFolderBackgroundImages . $mosaic_filename), 95);
+    $current_mosaic_url = $this->uploadFileOnAws(public_path($this->tmpFolderBackgroundImages . $mosaic_filename), $mosaic_filename, $event_id, true);
+    unlink(public_path($this->tmpFolderBackgroundImages . $mosaic_filename));
+    
+    var_dump($current_mosaic_url);
+    
+    
+    Log::info('mosaic_url ' . $current_mosaic_url);
+    
+    echo $event_id;
+    
+    return;
+  }
 
   public function addTarget($event_id, $target_url, $rows, $columns, $print_width, $print_height) {
     //cleaning last target and parsed data
@@ -102,11 +123,11 @@ class Generator {
     $target->save();
   }
 
-  public function addImgToMosaic($event_id, $image_url, $mediaId = null, $animate, $watermark_depth = 65, $source_type = 'instagram') {
+  public function addImgToMosaic($event_id, $image_url, $mediaId = null, $animate = true, $watermark_depth = 65, $source_type = 'instagram') {
     $target = Target::findOrFail($event_id);
     $img = imagecreatefromjpeg($image_url);
     $img_color = $this->getAvgColor($img);
-    
+    Log::info('inner tttype ' . $event_id . ' ' .  $image_url . ' ' .  $mediaId . ' ' .  $animate . ' ' .  $watermark_depth . ' ' .  $source_type);
     //get last coordinates
     $last_thumb = Thumbnails::select()->where('event_id', '=', $event_id)->orderBy('created_at', 'desc')->first();
     $coordinates = null;
@@ -125,7 +146,7 @@ class Generator {
       whereNotBetween('x', array($x_inf, $last_thumb->x+$x_offset))->
       whereNotBetween('y', array($y_inf, $last_thumb->y+$y_offset))->orderBy('diff', 'asc')->first(); 
           
-      Log::info('coord 11 ' . $coordinates['x'] . $coordinates['y']); 
+      Log::info('coord 11 ' . $coordinates->x . $coordinates->y); 
     }
     
     //но важно добить последние, если выбрать координаты не рядом уже не получается
@@ -137,9 +158,10 @@ class Generator {
       if (!$coordinates) {
         //FIXME ecxeption not found
         throw new Exception('No target data in db. Please (re)parse target.');
+        exit();
       } 
     }
-    Log::info('coord 22 ' . $coordinates['x'] . $coordinates['y']);
+    Log::info('coord 22 ' . $coordinates->x . $coordinates->y);
     $this->setFiled($coordinates->id);                  
     
     $now = time();
@@ -349,6 +371,62 @@ class Generator {
     
     return $new;
   }
+  
+  private function generateHighres($event_id)
+  {
+    $target = Target::findOrFail($event_id);
+    
+    $width = 40;
+    $height = 40;
+    
+    $highres_width = $width * $target->columns;
+    $highres_height = $height * $target->rows;
+    
+    $mosaic = imagecreatefromjpeg($target->target_url);
+    $data = Thumbnails::where('event_id', '=', $event_id)->orderBy('x', 'asc')->orderBy('y', 'asc')->get(); 
+    
+    $thumbs = array();
+    foreach ($data as $row) {
+      $thumbs[$row->x][$row->y] = $row->masked_image_url;
+    }
+
+    $blank_cell = imagecreatetruecolor($width, $height);
+    $blank_row  = imagecreatetruecolor($width * $target->columns, $height);
+
+    for ($x = 0; $x < $target->rows; $x++) {
+      
+      Log::info('generate ' . $x);
+      
+      $row = $blank_row;
+      for ($y = 0; $y < $target->columns; $y++) {
+        $current_cell = $blank_cell;
+          
+        if (isset($thumbs[$x][$y])) {
+          $img = imagecreatefromjpeg('http:' . $thumbs[$x][$y]);
+          //$current_cell = imagecreatetruecolor($width, $height);
+          //imagecopyresized($new, $img, 0, 0, $delta, 0, $size, $size, $size, $size);
+          imagecopyresized($current_cell, $img, 0, 0, 0, 0, $width, $width, imagesx($img), imagesy($img));
+           
+          //$current_cell = imagecreatefromjpeg('http:' . $thumbs[$x][$y]); 
+          
+        }
+        
+        imagecopy($row, $current_cell, $y * $width, 0, 0, 0, $width, $height);  
+      }
+      
+      imagecopy($mosaic, $row, 0, $x * $height, 0, 0, $width * $target->columns,  $height);
+      
+      if ($x > 20) {
+        return $mosaic;
+      } 
+    }
+    
+    /*imagejpeg($mosaic, $this->res_file, 99);
+    unlink($this->tmpFolderBackgroundImages . $output_filename);
+    copy($this->res_file, $this->tmpFolderBackgroundImages . $output_filename);*/
+    
+    return $mosaic;
+  }
 
   private function generate($event_id)
   {
@@ -366,6 +444,9 @@ class Generator {
     $blank_row  = imagecreatetruecolor($target->cell_width * $target->columns, $target->cell_height);
 
     for ($x = 0; $x < $target->rows; $x++) {
+      
+      Log::info('generate ' . $x);
+      
       $row = $blank_row;
       for ($y = 0; $y < $target->columns; $y++) {
         $current_cell = $blank_cell;
