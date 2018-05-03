@@ -157,6 +157,7 @@ class Generator {
       //FIXME make finish (all is_filled=1)
       if (!$coordinates) {
         //FIXME ecxeption not found
+        Log::info('no target data');
         throw new Exception('No target data in db. Please (re)parse target.');
         exit();
       } 
