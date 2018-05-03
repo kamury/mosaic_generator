@@ -157,7 +157,7 @@ class Generator {
       //FIXME make finish (all is_filled=1)
       if (!$coordinates) {
         //FIXME ecxeption not found
-        Log::info('no target data');
+        Log::info('no target data, event id:' . $event_id);
         throw new Exception('No target data in db. Please (re)parse target.');
         exit();
       } 
@@ -445,8 +445,6 @@ class Generator {
     $blank_row  = imagecreatetruecolor($target->cell_width * $target->columns, $target->cell_height);
 
     for ($x = 0; $x < $target->rows; $x++) {
-      
-      Log::info('generate ' . $x);
       
       $row = $blank_row;
       for ($y = 0; $y < $target->columns; $y++) {
