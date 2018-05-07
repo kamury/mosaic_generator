@@ -146,7 +146,7 @@ class Generator {
       whereNotBetween('x', array($x_inf, $last_thumb->x+$x_offset))->
       whereNotBetween('y', array($y_inf, $last_thumb->y+$y_offset))->orderBy('diff', 'asc')->first(); 
           
-      Log::info('coord 11, event id: ' . $event_id . ', ' . $coordinates->x . '-' . $coordinates->y); 
+      //Log::info('coord 11, event id: ' . $event_id . ', ' . $coordinates->x . '-' . $coordinates->y); 
     }
     
     //но важно добить последние, если выбрать координаты не рядом уже не получается
