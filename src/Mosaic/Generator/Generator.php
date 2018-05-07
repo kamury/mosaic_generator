@@ -127,43 +127,8 @@ class Generator {
     $target = Target::findOrFail($event_id);
     $img = imagecreatefromjpeg($image_url);
     $img_color = $this->getAvgColor($img);
-    Log::info('inner tttype ' . $event_id . ' ' .  $image_url . ' ' .  $mediaId . ' ' .  $animate . ' ' .  $watermark_depth . ' ' .  $source_type);
-    //get last coordinates
-    $last_thumb = Thumbnails::select()->where('event_id', '=', $event_id)->orderBy('created_at', 'desc')->first();
-    $coordinates = null;
     
-    DB::enableQueryLog();
-    
-    if ($last_thumb) {
-      $x_offset = floor($target->columns / 8);
-      $y_offset = floor($target->rows / 8);
-      //чтобы координваты были не рядом
-      $x_inf = ($last_thumb->x-$x_offset > 0) ? $last_thumb->x-$x_offset : 0;
-      $y_inf = ($last_thumb->y-$y_offset > 0) ? $last_thumb->y-$y_offset : 0;
-      
-      $coordinates = ParsedTarget::select('*', DB::raw("abs(red - {$img_color['red']}) + abs(green - {$img_color['green']}) + abs(blue - {$img_color['blue']}) as diff"))->
-      where('is_filled', '=', 0)->where('event_id', '=', $event_id)->
-      whereNotBetween('x', array($x_inf, $last_thumb->x+$x_offset))->
-      whereNotBetween('y', array($y_inf, $last_thumb->y+$y_offset))->orderBy('diff', 'asc')->first(); 
-          
-      //Log::info('coord 11, event id: ' . $event_id . ', ' . $coordinates->x . '-' . $coordinates->y); 
-    }
-    
-    //но важно добить последние, если выбрать координаты не рядом уже не получается
-    if (!$coordinates) {
-      $coordinates = ParsedTarget::select('*', DB::raw("abs(red - {$img_color['red']}) + abs(green - {$img_color['green']}) + abs(blue - {$img_color['blue']}) as diff"))->
-      where('is_filled', '=', 0)->where('event_id', '=', $event_id)->orderBy('diff', 'asc')->first();
-      
-      //FIXME make finish (all is_filled=1)
-      if (!$coordinates) {
-        //FIXME ecxeption not found
-        Log::info('no target data, event id:' . $event_id);
-        throw new Exception('No target data in db. Please (re)parse target.');
-        exit();
-      } 
-    }
-    Log::info('coord 22, event id: ' . $event_id . ', ' . $coordinates->x . '-' . $coordinates->y);
-    $this->setFiled($coordinates->id);                  
+    $coordinates = $this->getCoordinates($event_id, $img_color);                  
     
     $now = time();
     $filename = md5($image_url.$now).'.jpg';
@@ -243,6 +208,35 @@ class Generator {
     $thumb->update();
     
     return $thumb->id;
+  }
+
+  private function getCoordinates($event_id, $img_color) {
+    $coordinates = ParsedTarget::select('*', DB::raw("abs(red - {$img_color['red']}) + abs(green - {$img_color['green']}) + abs(blue - {$img_color['blue']}) as diff"))->
+      where('is_filled', '=', 0)->where('event_id', '=', $event_id)->
+      orderBy('diff', 'asc')->limit('500')->get();
+    
+    if (empty($coordinates)) {
+      Log::info('no target data, event id:' . $event_id);
+      throw new Exception('No target data in db. Please (re)parse target.');
+      exit();
+    }
+    
+    $same_colors = array();
+    $diff = $coordinates[0]->diff;
+    $i = 0;
+    
+    while ($coordinates[$i]->diff == $diff) {
+      $same_colors[] = $coordinates[$i];
+    }
+    
+    $random_index = rand(0, count($same_colors));
+    
+    Log::info('random iiiiindex:' . $random_index . ', all count: ' . $same_colors);
+    
+    $coordinates = $same_colors[$random_index];
+    
+    $this->setFiled($coordinates->id);
+    return $coordinates;
   }
 
   private function setTransparentMask($img, $source_cell, $cell_width, $cell_height, $watermark_depth) {
