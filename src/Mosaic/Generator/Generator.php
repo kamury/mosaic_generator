@@ -235,6 +235,8 @@ class Generator {
     
     $coordinates = $same_colors[$random_index];
     
+    Log::info('coord:' . $coordinates->x . ' - ' . $coordinates->y);
+    
     $this->setFiled($coordinates->id);
     return $coordinates;
   }
