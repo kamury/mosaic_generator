@@ -211,6 +211,8 @@ class Generator {
   }
 
   private function getCoordinates($event_id, $img_color) {
+    var_dump($img_color);
+    
     $coordinates = ParsedTarget::select('*', DB::raw("abs(red - {$img_color['red']}) + abs(green - {$img_color['green']}) + abs(blue - {$img_color['blue']}) as diff"))->
       where('is_filled', '=', 0)->where('event_id', '=', $event_id)->
       orderBy('diff', 'asc')->limit('500')->get();
@@ -224,14 +226,17 @@ class Generator {
     $same_colors = array();
     $diff = $coordinates[0]->diff;
     $i = 0;
+    $total_count = count($coordinates);
     
-    while ($coordinates[$i]->diff == $diff) {
-      $same_colors[] = $coordinates[$i];
+    while ($coordinates[$i]->diff == $diff && $i <= $total_count) {      
+      $same_colors[$i] = $coordinates[$i];
+      $i++;
+      echo $i;
     }
     
-    $random_index = rand(0, count($same_colors));
+    $random_index = rand(0, count($same_colors) - 1);
     
-    Log::info('random iiiiindex:' . $random_index . ', all count: ' . $same_colors);
+    Log::info('random iiiiindex:' . $random_index . ', all count: ' . count($same_colors));
     
     $coordinates = $same_colors[$random_index];
     
