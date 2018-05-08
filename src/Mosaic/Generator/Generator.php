@@ -128,7 +128,7 @@ class Generator {
     $img = imagecreatefromjpeg($image_url);
     $img_color = $this->getAvgColor($img);
     
-    $coordinates = $this->getCoordinates($event_id, $img_color);                  
+    $coordinates = $this->getUniqueCoordinate($event_id, $img_color);                  
     
     $now = time();
     $filename = md5($image_url.$now).'.jpg';
@@ -210,9 +210,29 @@ class Generator {
     return $thumb->id;
   }
 
-  private function getCoordinates($event_id, $img_color) {
-    var_dump($img_color);
+  private function getUniqueCoordinate($event_id, $img_color) {
+    $current_coordinates = $this->getRandomCoordinates($event_id, $img_color);
     
+    $is_coord_free = FALSE;
+    
+    while(!$is_coord_free) {
+      $updated_coord = ParsedTarget::where('id', '=', $current_coordinates->id)->lockForUpdate()->first();
+      
+      if ($updated_coord->is_filled == 0) {
+        $is_coord_free = TRUE;
+      } else {
+        $current_coordinates = $this->getRandomCoordinates($event_id, $img_color);
+      }
+      
+      ParsedTarget::where('id', '=', $updated_coord->id)
+            ->update(['is_filled' => 1]);
+    }
+    
+    Log::info('random coord:' . $updated_coord->x . '-' . $updated_coord->y);
+    return $updated_coord;
+  }
+
+  private function getRandomCoordinates($event_id, $img_color) {
     $coordinates = ParsedTarget::select('*', DB::raw("abs(red - {$img_color['red']}) + abs(green - {$img_color['green']}) + abs(blue - {$img_color['blue']}) as diff"))->
       where('is_filled', '=', 0)->where('event_id', '=', $event_id)->
       orderBy('diff', 'asc')->limit('500')->get();
@@ -228,22 +248,20 @@ class Generator {
     $i = 0;
     $total_count = count($coordinates);
     
-    while ($coordinates[$i]->diff == $diff && $i <= $total_count) {      
+    while ($i < $total_count && $coordinates[$i]->diff >= $diff-2) {      
       $same_colors[$i] = $coordinates[$i];
       $i++;
-      echo $i;
     }
     
     $random_index = rand(0, count($same_colors) - 1);
     
     Log::info('random iiiiindex:' . $random_index . ', all count: ' . count($same_colors));
     
-    $coordinates = $same_colors[$random_index];
+    $current_coordinates = $same_colors[$random_index];
     
-    Log::info('coord:' . $coordinates->x . '-' . $coordinates->y);
+    Log::info('random coord:' . $current_coordinates->x . '-' . $current_coordinates->y);
     
-    $this->setFiled($coordinates->id);
-    return $coordinates;
+    return $current_coordinates;
   }
 
   private function setTransparentMask($img, $source_cell, $cell_width, $cell_height, $watermark_depth) {
@@ -500,13 +518,6 @@ class Generator {
     $sizes['cell_height'] = $img['height'] / $sizes['rows'];
     
     return $sizes;
-  }
-
-  private function setFiled($id) {
-    $parsed = ParsedTarget::findOrFail($id);
-    $parsed->is_filled = 1;
-    $parsed->save();
-    Log::info('filled ' . $id);
   }
 
   //get closest multiple
