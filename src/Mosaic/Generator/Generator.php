@@ -237,13 +237,14 @@ class Generator {
       where('is_filled', '=', 0)->where('event_id', '=', $event_id)->
       orderBy('diff', 'asc')->limit('500')->get();
     
-    if (empty($coordinates)) {
+    if (!$coordinates || count($coordinates) == 0) {
       Log::info('no target data, event id:' . $event_id);
       throw new Exception('No target data in db. Please (re)parse target.');
       exit();
     }
     
     $same_colors = array();
+    
     $diff = $coordinates[0]->diff;
     $i = 0;
     $total_count = count($coordinates);
@@ -255,7 +256,7 @@ class Generator {
     
     $random_index = rand(0, count($same_colors) - 1);
     
-    Log::info('random iiiiindex:' . $random_index . ', all count: ' . count($same_colors));
+    Log::info('event id:' . $event_id . ' random iiiiindex,' . $random_index . ', all count: ' . count($same_colors));
     
     $current_coordinates = $same_colors[$random_index];
     
