@@ -228,7 +228,7 @@ class Generator {
             ->update(['is_filled' => 1]);
     }
     
-    Log::info('random coord:' . $updated_coord->x . '-' . $updated_coord->y);
+    Log::info('uniq coord:' . $event_id . ' ,' . $updated_coord->x . '-' . $updated_coord->y);
     return $updated_coord;
   }
 
@@ -259,7 +259,7 @@ class Generator {
     
     $current_coordinates = $same_colors[$random_index];
     
-    Log::info('random coord:' . $current_coordinates->x . '-' . $current_coordinates->y);
+    Log::info('random coord:' . $event_id . ' ,' . $current_coordinates->x . '-' . $current_coordinates->y);
     
     return $current_coordinates;
   }
