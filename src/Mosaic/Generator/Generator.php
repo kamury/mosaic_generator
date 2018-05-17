@@ -132,7 +132,7 @@ class Generator {
     
     $now = time();
     $filename = md5($image_url.$now).'.jpg';
-    
+    Log::info('add img to mosaic ' . $filename);
     //put mask on the image
     $img = $this->setTransparentMask($img, $coordinates->source_cell, $target->cell_width, $target->cell_height, 100 - $watermark_depth);
     //save
@@ -187,7 +187,7 @@ class Generator {
       'y' =>$coordinates->y);
     
     $thumb = Thumbnails::create($thumb_data);
-    
+    Log::info('mosaic thumb created ' . $thumb->id);
     //regenerate mosaic
     $mosaic = $this->generate($event_id);
     $mosaic_filename = 'mosaic-' . $filename;
@@ -206,7 +206,7 @@ class Generator {
     
     $thumb->current_mosaic_url = $current_mosaic_url;
     $thumb->update();
-    
+    Log::info('mosaic thumb updated ' . $thumb->id);
     return $thumb->id;
   }
 
@@ -291,6 +291,9 @@ class Generator {
     $now = date('Y-m-d H:i:s');
     $showed_dt = DateTime::createFromFormat('U', $showed_ts);
     $showed_dt->setTimezone(new DateTimeZone(Config::get('app.timezone')));
+    Log::info('now ' . $now);
+    Log::info('showed ts ' . $showed_dt->format('Y-m-d H:i:s'));
+    
     //var_dump($showed_dt->format('Y-m-d H:i:s'));
     $current_thumb = Thumbnails::where('event_id', '=', $event_id)->
       where('expired_at', '>', $now)->
