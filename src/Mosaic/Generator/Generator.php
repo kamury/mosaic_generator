@@ -15,7 +15,7 @@ class Generator {
   
   private $tmpFolderBackgroundImages = "uploads/tmp/events_background_upload/";
   private $fontsPath = "-/fonts/proxima.ttf";
-  private $expired_interval = 16;
+  private $expired_interval = 36;
   
   public function getHighres($event_id, $mosaic_size)
   {
@@ -198,7 +198,7 @@ class Generator {
     
     if ($animate) {
       //mosaic has genered, image ready to be shown, set expired to show
-      $thumb->expired_at = $this->getExpired($event_id);;
+      $thumb->expired_at = $this->getExpired($event_id);
     } else {
       // FIXME [13.08.2016]: format should be in constant? or we should pass $animate to getExpired?
       $thumb->expired_at = date('Y-m-d H:i:s', strtotime('-1 day'));
