@@ -124,6 +124,15 @@ class Generator {
   }
 
   public function addImgToMosaic($event_id, $image_url, $mediaId = null, $animate = true, $watermark_depth = 65, $source_type = 'instagram') {
+    
+    $count = ParsedTarget::where('is_filled', '=', 0)->where('event_id', '=', $event_id)->count();
+    
+    if (!$count) {
+      Log::info('Finished - no target data, event id:' . $event_id);
+      
+      return false;
+    }
+    
     $target = Target::findOrFail($event_id);
     $img = imagecreatefromjpeg($image_url);
     $img_color = $this->getAvgColor($img);
@@ -239,6 +248,7 @@ class Generator {
     
     if (!$coordinates || count($coordinates) == 0) {
       Log::info('no target data, event id:' . $event_id);
+      
       throw new Exception('No target data in db. Please (re)parse target.');
       exit();
     }
