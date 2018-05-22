@@ -62,15 +62,23 @@ class Generator {
       $target->save();
       return TRUE;
     } catch (Exception $e) {
+      Log::info("there is no target for event {$event_id}, exception {$e->getMessage()}");
       return FALSE;
     }
   }
   
   public function setMosaicSize($event_id, $mosaic_size)
   {
-    $target = Target::findOrFail($event_id);
-    $grid_size = self::getGridSize($mosaic_size);
-    self::addTarget($event_id, $target->target_url, $grid_size['rows'], $grid_size['cols'], $target->print_width, $target->print_height);
+    try {
+      $target = Target::findOrFail($event_id);
+      $grid_size = self::getGridSize($mosaic_size);
+      self::addTarget($event_id, $target->target_url, $grid_size['rows'], $grid_size['cols'], $target->print_width, $target->print_height);  
+    } catch (Exception $e) {
+      Log::info("there is no target for event {$event_id}, exception {$e->getMessage()}");
+      return;
+    }
+    
+    
   }
   
   public function getGridSize($mosaic_size)
