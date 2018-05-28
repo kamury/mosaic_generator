@@ -38,6 +38,19 @@ class Generator {
     return;
   }
 
+  public function checkTargetSize($img_url)
+  {
+    $img = imagecreatefromjpeg($img_url);
+    $width = imagesx($img); 
+    $height = imagesy($img);
+    
+    if ($width == 1024 && $height == 768) {
+      return TRUE;
+    } else {
+      return FALSE;
+    }
+  }
+
   public function addTarget($event_id, $target_url, $rows, $columns, $print_width, $print_height) {
     //cleaning last target and parsed data
     Target::where('event_id', '=', $event_id)->delete();
