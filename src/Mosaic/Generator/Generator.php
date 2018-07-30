@@ -158,7 +158,13 @@ class Generator {
     $img = imagecreatefromjpeg($image_url);
     $img_color = $this->getAvgColor($img);
     
-    $coordinates = $this->getUniqueCoordinate($event_id, $img_color);                  
+    $coordinates = $this->getUniqueCoordinate($event_id, $img_color);
+    
+    //save src image and upload on aws
+    $srcImageName = $coordinates->x . $coordinates->y . '.jpg';
+    imagejpeg($img, public_path($this->tmpFolderBackgroundImages . $srcImageName), 95);
+    $uploadedSrcImage = $this->uploadFileOnAws(public_path($this->tmpFolderBackgroundImages . $srcImageName), $srcImageName, $event_id, false, true);
+    unlink(public_path($this->tmpFolderBackgroundImages . $srcImageName));                 
     
     $now = time();
     $filename = md5($image_url.$now).'.jpg';
@@ -186,7 +192,7 @@ class Generator {
     $thumb_filename = 'thumb-' . $filename;
     imagejpeg($thumb, public_path($this->tmpFolderBackgroundImages . $thumb_filename), 95);
     $thumb_url = $this->uploadFileOnAws(public_path($this->tmpFolderBackgroundImages . $thumb_filename), $thumb_filename, $event_id, true);
-    unlink(public_path($this->tmpFolderBackgroundImages . $thumb_filename));
+    unlink(public_path($this->tmpFolderBackgroundImages . $thumb_filename));    
     
     //save thumb in database
     /*$thumb = new Thumbnails();
@@ -209,7 +215,7 @@ class Generator {
       'thumb_url' => $thumb_url,
       'processed_image_url' => $processed_image_url,
       'masked_image_url' =>$masked_image_url,
-      'original_image_url' =>$image_url,
+      'original_image_url' => $uploadedSrcImage,
       'red' =>$img_color['red'],
       'green' =>$img_color['green'],
       'blue' =>$img_color['blue'],
@@ -236,7 +242,7 @@ class Generator {
     
     $thumb->current_mosaic_url = $current_mosaic_url;
     $thumb->update();
-    Log::info('mosaic thumb updated ' . $thumb->id);
+    Log::info('mosaic thumb updated id:' . $thumb->id . ', filename:' . $mosaic_filename);
     return $thumb->id;
   }
 
@@ -322,8 +328,6 @@ class Generator {
     $now = date('Y-m-d H:i:s');
     $showed_dt = DateTime::createFromFormat('U', $showed_ts);
     $showed_dt->setTimezone(new DateTimeZone(Config::get('app.timezone')));
-    Log::info('now ' . $now);
-    Log::info('showed ts ' . $showed_dt->format('Y-m-d H:i:s'));
     
     //var_dump($showed_dt->format('Y-m-d H:i:s'));
     $current_thumb = Thumbnails::where('event_id', '=', $event_id)->
@@ -604,10 +608,12 @@ class Generator {
    * @param bool $isTmp save to tmp folder or no
    * @return void
    */
-   private function uploadFileOnAws($srcFilePath, $dstFileName, $eventId, $isTmp = false){
+   private function uploadFileOnAws($srcFilePath, $dstFileName, $eventId, $isTmp = false, $isSrcImageFile = false){
     
     if ($isTmp) {
       $amazonFilePath = Config::get('amazonBucket.mosaic') . "{$eventId}/tmp/{$dstFileName}";  
+    } elseif ($isSrcImageFile) {
+      $amazonFilePath = Config::get('amazonBucket.mosaic') . "{$eventId}_src/{$dstFileName}";
     } else {
       $amazonFilePath = Config::get('amazonBucket.mosaic') . "{$eventId}/{$dstFileName}";
     }
