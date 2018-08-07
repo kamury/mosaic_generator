@@ -28,8 +28,8 @@ class UpdateTargetAddPrintSizes extends Migration {
 	{
 		Schema::table('mosaic_generator_target', function($table)
     {
-      $table->dropPrimary('print_width');
-      $table->dropPrimary('print_height');
+      $table->dropColumn('print_width');
+      $table->dropColumn('print_height');
     });
 	}
 

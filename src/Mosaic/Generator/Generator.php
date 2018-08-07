@@ -17,25 +17,44 @@ class Generator {
   private $fontsPath = "-/fonts/proxima.ttf";
   private $expired_interval = 36;
   
-  public function getHighres($event_id, $mosaic_size)
+  public function getHighres($event_id, $step)
   {
+    $h = Highres::find($event_id);
     
-    //regenerate mosaic
-    $mosaic = $this->generateHighres($event_id);
-    $mosaic_filename = 'highresmosaic.jpg';
+    if (!$h) {
+      if ($step == 0) {
+        $h = new Highres();
+        $h->event_id = $event_id;
+      } else {
+        Log::error('highres error - no record in table for event:' . $event_id . ', step:' . $step);
+        return false;
+      }
+    }
+    
+    $step = $step + 1;
+    
+    if ($step < 5) {
+      //generate mosaic highres part
+      $mosaic = $this->generateHighres($event_id, $step);
+    } else {
+      //glue full pic from 4 pieces
+      $mosaic = $this->glueHighres($event_id);
+      $step = '';
+    }
+    
+    $mosaic_filename = 'highresmosaic' . $step . '.jpg';
     //save current mosaic
     imagejpeg($mosaic, public_path($this->tmpFolderBackgroundImages . $mosaic_filename), 95);
     $current_mosaic_url = $this->uploadFileOnAws(public_path($this->tmpFolderBackgroundImages . $mosaic_filename), $mosaic_filename, $event_id, true);
     unlink(public_path($this->tmpFolderBackgroundImages . $mosaic_filename));
     
-    var_dump($current_mosaic_url);
+    $current_mosaic_url = 'https:' . $current_mosaic_url;
     
+    Log::info('highres mosaic_url ' . $current_mosaic_url);
+    $h['url' . $step] = $current_mosaic_url;
+    $h->save();
     
-    Log::info('mosaic_url ' . $current_mosaic_url);
-    
-    echo $event_id;
-    
-    return;
+    return $current_mosaic_url;
   }
 
   public function checkTargetSize($img_url)
@@ -429,7 +448,101 @@ class Generator {
     return $new;
   }
   
-  private function generateHighres($event_id)
+  /*
+   *   1 2
+   *   3 4 
+   *
+  */
+  private function generateHighres($event_id, $step)
+  {
+    $target = Target::findOrFail($event_id);
+    
+    $width = 40;
+    $height = 40;
+    
+    $data = Thumbnails::where('event_id', '=', $event_id)->orderBy('x', 'asc')->orderBy('y', 'asc')->get(); 
+    
+    $thumbs = array();
+    foreach ($data as $row) {
+      $thumbs[$row->y][$row->x] = $row->masked_image_url;
+    }
+    
+    switch ($step) {
+      case 1:
+        $x_start = 0;
+        $x_end = floor($target->columns / 2); 
+        
+        $y_start = 0;
+        $y_end = floor($target->rows / 2);
+        break;
+      
+      case 2:
+        $x_start = ceil($target->columns / 2);
+        $x_end =  $target->columns;
+        
+        $y_start = 0;
+        $y_end = floor($target->rows / 2);
+        break;
+        
+       case 3:
+        $x_start = 0;
+        $x_end = floor($target->columns / 2);
+        
+        $y_start = ceil($target->rows / 2);
+        $y_end = $target->rows;
+        break;
+        
+       case 4:
+        $x_start = ceil($target->columns / 2);
+        $x_end = $target->columns;
+        
+        $y_start = ceil($target->rows / 2);
+        $y_end = $target->rows;
+        break;
+    }
+
+    $highres_width = $width * ($x_end - $x_start);
+    $highres_height = $height * ($y_end - $y_start);
+    
+    $mosaic = imagecreatetruecolor($highres_width, $highres_height);
+    
+    $blank_cell = imagecreatetruecolor($width, $height);
+    $blank_row  = imagecreatetruecolor($highres_width, $height);
+    
+    $x_i = 0;
+    $y_i = 0;
+    
+    for ($y = $y_start; $y < $y_end; $y++) {
+      
+      $row = $blank_row;
+      $x_i = 0;
+      
+      Log::info('highres event_id ' . $event_id . ', step ' . $step . ', y ' .  $y_i);
+      
+      for ($x = $x_start; $x < $x_end; $x++) {
+        $current_cell = $blank_cell;
+        //Log::info($x . ' - ' . $y . ', file' . $thumbs[$x][$y]);
+        if (isset($thumbs[$x][$y])) {
+          $img = imagecreatefromjpeg('http:' . $thumbs[$x][$y]);
+          //make tile with choosen size from photo
+          imagecopyresized($current_cell, $img, 0, 0, 0, 0, $width, $width, imagesx($img), imagesy($img));
+        }
+        
+        //insert tile in row
+        imagecopy($row, $current_cell, $x_i * $width, 0, 0, 0, $width, $height);
+        
+        $x_i++;
+      }
+      
+      //insert row in mosaic
+      imagecopy($mosaic, $row, 0, $y_i * $height, 0, 0, $width * $x_end,  $height);
+      $y_i++;
+    } 
+    
+    return $mosaic;
+  }
+
+  private function glueHighres($event_id)
   {
     $target = Target::findOrFail($event_id);
     
@@ -439,49 +552,30 @@ class Generator {
     $highres_width = $width * $target->columns;
     $highres_height = $height * $target->rows;
     
-    $mosaic = imagecreatefromjpeg($target->target_url);
-    $data = Thumbnails::where('event_id', '=', $event_id)->orderBy('x', 'asc')->orderBy('y', 'asc')->get(); 
+    $mosaic = imagecreatetruecolor($highres_width, $highres_height);
     
-    $thumbs = array();
-    foreach ($data as $row) {
-      $thumbs[$row->x][$row->y] = $row->masked_image_url;
-    }
-
-    $blank_cell = imagecreatetruecolor($width, $height);
-    $blank_row  = imagecreatetruecolor($width * $target->columns, $height);
-
-    for ($x = 0; $x < $target->rows; $x++) {
-      
-      Log::info('generate ' . $x);
-      
-      $row = $blank_row;
-      for ($y = 0; $y < $target->columns; $y++) {
-        $current_cell = $blank_cell;
-          
-        if (isset($thumbs[$x][$y])) {
-          $img = imagecreatefromjpeg('http:' . $thumbs[$x][$y]);
-          //$current_cell = imagecreatetruecolor($width, $height);
-          //imagecopyresized($new, $img, 0, 0, $delta, 0, $size, $size, $size, $size);
-          imagecopyresized($current_cell, $img, 0, 0, 0, 0, $width, $width, imagesx($img), imagesy($img));
-           
-          //$current_cell = imagecreatefromjpeg('http:' . $thumbs[$x][$y]); 
-          
-        }
-        
-        imagecopy($row, $current_cell, $y * $width, 0, 0, 0, $width, $height);  
-      }
-      
-      imagecopy($mosaic, $row, 0, $x * $height, 0, 0, $width * $target->columns,  $height);
-      
-      if ($x > 20) {
-        return $mosaic;
-      } 
-    }
+    $h = Highres::find($event_id);
     
-    /*imagejpeg($mosaic, $this->res_file, 99);
-    unlink($this->tmpFolderBackgroundImages . $output_filename);
-    copy($this->res_file, $this->tmpFolderBackgroundImages . $output_filename);*/
+    $step1 = imagecreatefromjpeg($h->url1);
+    $step2 = imagecreatefromjpeg($h->url2);
+    $step3 = imagecreatefromjpeg($h->url3);
+    $step4 = imagecreatefromjpeg($h->url4);
     
+    imagecopy($mosaic, $step1, 0, 0, 0, 0, imagesx($step1), imagesy($step1));
+    
+    $x2_start = ceil($target->columns / 2);
+    $y2_start = 0;
+    imagecopy($mosaic, $step2, $x2_start * $width, $y2_start * $height, 0, 0, imagesx($step2), imagesy($step2));
+    
+    $x3_start = 0;
+    $y3_start = ceil($target->rows / 2);
+    imagecopy($mosaic, $step3, $x3_start * $width, $y3_start * $height, 0, 0, imagesx($step3), imagesy($step3));
+    
+    $x4_start = ceil($target->columns / 2);
+    $y4_start = ceil($target->rows / 2);
+    imagecopy($mosaic, $step4, $x4_start * $width, $y4_start * $height, 0, 0, imagesx($step4), imagesy($step4));
+    
+    Log::info('highres glued event_id ' .$event_id);
     return $mosaic;
   }
 
