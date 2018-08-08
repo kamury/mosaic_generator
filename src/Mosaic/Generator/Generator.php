@@ -457,8 +457,8 @@ class Generator {
   {
     $target = Target::findOrFail($event_id);
     
-    $width = 40;
-    $height = 40;
+    $width = 50;
+    $height = 50;
     
     $data = Thumbnails::where('event_id', '=', $event_id)->orderBy('x', 'asc')->orderBy('y', 'asc')->get(); 
     
@@ -546,8 +546,8 @@ class Generator {
   {
     $target = Target::findOrFail($event_id);
     
-    $width = 40;
-    $height = 40;
+    $width = 50;
+    $height = 50;
     
     $highres_width = $width * $target->columns;
     $highres_height = $height * $target->rows;
