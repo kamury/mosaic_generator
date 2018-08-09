@@ -448,6 +448,25 @@ class Generator {
     return $new;
   }
   
+  private function highresSize($columns) {
+    $size = 40;
+    switch ($columns) {
+      case 64:
+        $size = 30;
+        break;
+      
+      case 32:
+        $size = 55;
+        break;
+        
+      case 16:
+        $size = 100;
+        break;
+    }
+    
+    return $size;
+  }
+  
   /*
    *   1 2
    *   3 4 
@@ -457,8 +476,9 @@ class Generator {
   {
     $target = Target::findOrFail($event_id);
     
-    $width = 50;
-    $height = 50;
+    
+    $width = $this->highresSize($target->columns);
+    $height = $this->highresSize($target->columns);
     
     $data = Thumbnails::where('event_id', '=', $event_id)->orderBy('x', 'asc')->orderBy('y', 'asc')->get(); 
     
@@ -546,8 +566,8 @@ class Generator {
   {
     $target = Target::findOrFail($event_id);
     
-    $width = 50;
-    $height = 50;
+    $width = $this->highresSize($target->columns);
+    $height = $this->highresSize($target->columns);
     
     $highres_width = $width * $target->columns;
     $highres_height = $height * $target->rows;
