@@ -449,8 +449,9 @@ class Generator {
   }
   
   private function highresSize($columns) {
-    $size = 40;
-    switch ($columns) {
+    //$size = 40;
+    $size = 300;
+    /*switch ($columns) {
       case 64:
         $size = 30;
         break;
@@ -461,8 +462,8 @@ class Generator {
         
       case 16:
         $size = 100;
-        break;
-    }
+        break;        
+    }*/
     
     return $size;
   }
