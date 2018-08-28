@@ -36,15 +36,18 @@ class Generator {
     if ($step < 5) {
       //generate mosaic highres part
       $mosaic = $this->generateHighres($event_id, $step);
+      $mosaic_filename = 'highresmosaic' . $step . '.jpg';
+      //save current mosaic
+      imagejpeg($mosaic, public_path($this->tmpFolderBackgroundImages . $mosaic_filename), 95);
     } else {
       //glue full pic from 4 pieces
       $mosaic = $this->glueHighres($event_id);
       $step = '';
+      
+      $mosaic_filename = 'highresmosaic' . $step . '.jpg';
+      $mosaic->writeImage(public_path($this->tmpFolderBackgroundImages . $mosaic_filename));
     }
     
-    $mosaic_filename = 'highresmosaic' . $step . '.jpg';
-    //save current mosaic
-    imagejpeg($mosaic, public_path($this->tmpFolderBackgroundImages . $mosaic_filename), 95);
     $current_mosaic_url = $this->uploadFileOnAws(public_path($this->tmpFolderBackgroundImages . $mosaic_filename), $mosaic_filename, $event_id, true);
     unlink(public_path($this->tmpFolderBackgroundImages . $mosaic_filename));
     
@@ -564,6 +567,39 @@ class Generator {
   }
 
   private function glueHighres($event_id)
+  {
+    $target = Target::findOrFail($event_id);
+    
+    $h = Highres::find($event_id);
+    
+    Log::info('highres row 1, event_id: ' . $event_id);
+    $im_row1 = new Imagick();
+    $im_row1->readImage($h->url1);
+    $im_row1->readImage($h->url2);
+    $im_row1->resetIterator();
+    $row1 = $im_row1->appendImages(false);
+    
+    Log::info('highres row 2, event_id: ' . $event_id);
+    $im_row2 = new Imagick();
+    $im_row2->readImage($h->url3);
+    $im_row2->readImage($h->url4);
+    $im_row2->resetIterator();
+    $row2 = $im_row2->appendImages(false);
+    
+    Log::info('highres full, event_id: ' . $event_id);
+    $full_im = new Imagick();
+    $full_im->addImage($row1);
+    $full_im->addImage($row2);
+    $full_im->resetIterator();
+    $full = $full_im->appendImages(true);
+    
+    $full->setImageFormat("jpg");
+    
+    Log::info('highres glued event_id ' .$event_id);
+    return $full;
+  }
+
+  private function glueHighresOld($event_id)
   {
     $target = Target::findOrFail($event_id);
     
