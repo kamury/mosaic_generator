@@ -572,22 +572,22 @@ class Generator {
     
     $highres_width = $width * $target->columns;
     $highres_height = $height * $target->rows;
-    
+    Log::info('highres full width ' . $highres_width . ', height ' . $highres_height);
     $mosaic = imagecreatetruecolor($highres_width, $highres_height);
-    
+    Log::info('highres full created');
     $h = Highres::find($event_id);
     
     $step1 = imagecreatefromjpeg($h->url1);
     $step2 = imagecreatefromjpeg($h->url2);
     $step3 = imagecreatefromjpeg($h->url3);
     $step4 = imagecreatefromjpeg($h->url4);
-    
+    Log::info('highres 4 full tiles created');
     imagecopy($mosaic, $step1, 0, 0, 0, 0, imagesx($step1), imagesy($step1));
-    
+    Log::info('highres full step1 added ' . $h->url1);
     $x2_start = ceil($target->columns / 2);
     $y2_start = 0;
     imagecopy($mosaic, $step2, $x2_start * $width, $y2_start * $height, 0, 0, imagesx($step2), imagesy($step2));
-    
+    Log::info('highres full step2 added ' . $h->url2);
     $x3_start = 0;
     $y3_start = ceil($target->rows / 2);
     imagecopy($mosaic, $step3, $x3_start * $width, $y3_start * $height, 0, 0, imagesx($step3), imagesy($step3));
