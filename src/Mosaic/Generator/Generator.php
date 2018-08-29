@@ -624,7 +624,7 @@ class Generator {
     }
     
     Log::info('highres glued event_id ' .$event_id);
-    return $url;
+    return $urls;
   }
   
   private function generate($event_id)
