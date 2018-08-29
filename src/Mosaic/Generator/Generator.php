@@ -619,7 +619,7 @@ class Generator {
     $urls['a3'] = clone $urls['a2'];
     $urls['a3']->scaleImage(2479, 1753);
     
-    foreach ($url as $value) {
+    foreach ($urls as $value) {
       $value->setImageFormat("jpg"); 
     }
     
