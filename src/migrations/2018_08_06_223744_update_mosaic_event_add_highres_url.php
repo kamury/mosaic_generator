@@ -25,7 +25,9 @@ class UpdateMosaicEventAddHighresUrl extends Migration {
 	 */
 	public function down()
 	{
-		$table->dropColumn('highres_url');
+	  Schema::table('mosaic_events', function($table) {
+		  $table->dropColumn('highres_url');
+    });
 	}
 
 }

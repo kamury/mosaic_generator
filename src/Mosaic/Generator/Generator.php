@@ -39,23 +39,35 @@ class Generator {
       $mosaic_filename = 'highresmosaic' . $step . '.jpg';
       //save current mosaic
       imagejpeg($mosaic, public_path($this->tmpFolderBackgroundImages . $mosaic_filename), 95);
+      
+      $current_mosaic_url = $this->uploadFileOnAws(public_path($this->tmpFolderBackgroundImages . $mosaic_filename), $mosaic_filename, $event_id, true);
+      unlink(public_path($this->tmpFolderBackgroundImages . $mosaic_filename));
+      
+      $current_mosaic_url = 'https:' . $current_mosaic_url;
+      
+      Log::info('highres mosaic_url ' . $current_mosaic_url);
+      $h['url' . $step] = $current_mosaic_url;
+      $h->save();
     } else {
       //glue full pic from 4 pieces
       $mosaic = $this->glueHighres($event_id);
       $step = '';
+      $current_mosaic_url = array();
       
-      $mosaic_filename = 'highresmosaic' . $step . '.jpg';
-      $mosaic->writeImage(public_path($this->tmpFolderBackgroundImages . $mosaic_filename));
+      foreach ($mosaic as $key => $value) {
+        $mosaic_filename = 'highresmosaic' . $key . '.jpg';
+        $value->writeImage(public_path($this->tmpFolderBackgroundImages . $mosaic_filename)); 
+        $current_mosaic_url[$key] = $this->uploadFileOnAws(public_path($this->tmpFolderBackgroundImages . $mosaic_filename), $mosaic_filename, $event_id, true);
+        unlink(public_path($this->tmpFolderBackgroundImages . $mosaic_filename));
+        
+        $current_mosaic_url[$key] = 'https:' . $current_mosaic_url[$key]; 
+      }
+      
+      Log::info('highres mosaic_url ' . $current_mosaic_url['url']);
+    
+      $h['url'] = $current_mosaic_url['url'];
+      $h->save();
     }
-    
-    $current_mosaic_url = $this->uploadFileOnAws(public_path($this->tmpFolderBackgroundImages . $mosaic_filename), $mosaic_filename, $event_id, true);
-    unlink(public_path($this->tmpFolderBackgroundImages . $mosaic_filename));
-    
-    $current_mosaic_url = 'https:' . $current_mosaic_url;
-    
-    Log::info('highres mosaic_url ' . $current_mosaic_url);
-    $h['url' . $step] = $current_mosaic_url;
-    $h->save();
     
     return $current_mosaic_url;
   }
@@ -592,11 +604,27 @@ class Generator {
     $full_im->addImage($row2);
     $full_im->resetIterator();
     $full = $full_im->appendImages(true);
+
+    $urls['url'] = $full;
     
-    $full->setImageFormat("jpg");
+    $urls['a0'] = clone $full;
+    $urls['a0']->scaleImage(7021, 4966);
+    
+    $urls['a1'] = clone $urls['a0'];
+    $urls['a1']->scaleImage(4966, 3507);
+    
+    $urls['a2'] = clone $urls['a1'];
+    $urls['a2']->scaleImage(3507, 2479);
+    
+    $urls['a3'] = clone $urls['a2'];
+    $urls['a3']->scaleImage(2479, 1753);
+    
+    foreach ($url as $value) {
+      $value->setImageFormat("jpg"); 
+    }
     
     Log::info('highres glued event_id ' .$event_id);
-    return $full;
+    return $url;
   }
   
   private function generate($event_id)
