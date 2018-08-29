@@ -607,17 +607,17 @@ class Generator {
 
     $urls['url'] = $full;
     
-    $urls['a0'] = clone $full;
-    $urls['a0']->scaleImage(7021, 4966);
+    $urls['A0'] = clone $full;
+    $urls['A0']->scaleImage(7021, 4966);
     
-    $urls['a1'] = clone $urls['a0'];
-    $urls['a1']->scaleImage(4966, 3507);
+    $urls['A1'] = clone $urls['a0'];
+    $urls['A1']->scaleImage(4966, 3507);
     
-    $urls['a2'] = clone $urls['a1'];
-    $urls['a2']->scaleImage(3507, 2479);
+    $urls['A2'] = clone $urls['a1'];
+    $urls['A2']->scaleImage(3507, 2479);
     
-    $urls['a3'] = clone $urls['a2'];
-    $urls['a3']->scaleImage(2479, 1753);
+    $urls['A3'] = clone $urls['a2'];
+    $urls['A3']->scaleImage(2479, 1753);
     
     foreach ($urls as $value) {
       $value->setImageFormat("jpg"); 
