@@ -782,6 +782,7 @@ class Generator {
       $width = imagesx($img); 
       $height = imagesy($img);  
     } catch (Exception $e) {
+      Log::error('image parsed error '. $e->getMessage());
       return FALSE;
     }
     
